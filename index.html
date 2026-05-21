@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>IoT Based Circuit Breaker | GPC Satna</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+
+  <style>
+    :root {
+      --bg:        #060e1c;
+      --panel:     #0b1728;
+      --card:      #0d1f35;
+      --border:    #1a3a5c;
+      --accent:    #f5a623;
+      --accent2:   #00c8ff;
+      --green:     #39ff14;
+      --red:       #ff3b3b;
+      --text:      #c8dff0;
+      --muted:     #4a7a9b;
+      --heading:   #ffffff;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Rajdhani', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── GRID BG ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── PAGE SYSTEM ── */
+    .page { display: none; min-height: 100vh; position: relative; z-index: 1; }
+    .page.active { display: flex; flex-direction: column; }
+
+    /* ══════════════════════════════
+       HEADER (shared)
+    ══════════════════════════════ */
+    .site-header {
+      background: linear-gradient(135deg, #05111f 0%, #0a1f3a 100%);
+      border-bottom: 2px solid var(--accent);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      box-shadow: 0 4px 24px rgba(245,166,35,0.15);
+    }
+
+    .header-logos {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-circle {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      border: 2px solid var(--accent);
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #0b1728;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    .logo-circle img {
+      width: 100%; height: 100%; object-fit: cover;
+      border-radius: 50%;
+    }
+
+    /* SVG fallback logo */
+    .logo-svg {
+      width: 48px; height: 48px;
+    }
+
+    .header-center {
+      text-align: center;
+      flex: 1;
+    }
+
+    .header-college {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 3px;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .header-title {
+      font-family: 'Orbitron', monospace;
+      font-size: clamp(1rem, 2.5vw, 1.5rem);
+      font-weight: 900;
+      color: var(--heading);
+      letter-spacing: 2px;
+      line-height: 1.2;
+    }
+
+    .header-title span { color: var(--accent); }
+
+    /* ══════════════════════════════
+       LOGIN PAGE
+    ══════════════════════════════ */
+    #page-login {
+      background:
+        radial-gradient(ellipse at 20% 30%, rgba(0,200,255,0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 70%, rgba(245,166,35,0.06) 0%, transparent 50%),
+        var(--bg);
+    }
+
+    .login-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+
+    .login-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 44px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow:
+        0 0 0 1px rgba(245,166,35,0.1),
+        0 20px 60px rgba(0,0,0,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.05);
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.6s ease;
+    }
+
+    .login-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--accent2), transparent);
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .login-icon {
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 8px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .login-title {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--heading);
+      text-align: center;
+      margin-bottom: 32px;
+      letter-spacing: 1px;
+    }
+
+    .form-group {
+      margin-bottom: 22px;
+    }
+
+    .form-label {
+      display: block;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 3px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #060e1c;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.95rem;
+      color: var(--heading);
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .form-input::placeholder { color: #2a4a6a; }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(245,166,35,0.12);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: #060e1c;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .login-btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+    }
+
+    .login-btn:hover {
+      background: #ffba3a;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(245,166,35,0.4);
+    }
+
+    .login-btn:active { transform: translateY(0); }
+
+    .login-error {
+      background: rgba(255,59,59,0.1);
+      border: 1px solid rgba(255,59,59,0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      color: var(--red);
+      font-size: 0.9rem;
+      text-align: center;
+      margin-top: 16px;
+      display: none;
+      animation: shake 0.4s ease;
+    }
+
+    @keyframes shake {
+      0%,100%{ transform: translateX(0); }
+      20%,60%{ transform: translateX(-6px); }
+      40%,80%{ transform: translateX(6px); }
+    }
+
+    /* ══════════════════════════════
+       DASHBOARD PAGE
+    ══════════════════════════════ */
+    #page-dashboard {
+      background:
+        radial-gradient(ellipse at 10% 20%, rgba(0,200,255,0.04) 0%, transparent 40%),
+        radial-gradient(ellipse at 90% 80%, rgba(245,166,35,0.04) 0%, transparent 40%),
+        var(--bg);
+    }
+
+    .dash-topbar {
+      background: rgba(11,23,40,0.9);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+    }
+
+    .dash-user {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--accent2);
+    }
+
+    .user-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s infinite;
+    }
+
+    @keyframes blink {
+      0%,100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .logout-btn {
+      background: rgba(255,59,59,0.1);
+      border: 1px solid rgba(255,59,59,0.3);
+      border-radius: 6px;
+      padding: 6px 16px;
+      color: var(--red);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .logout-btn:hover {
+      background: rgba(255,59,59,0.2);
+    }
+
+    .dash-body {
+      flex: 1;
+      padding: 28px 32px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .dash-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    /* STATUS PANEL */
+    .status-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .status-panel::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--accent2), var(--accent));
+    }
+
+    .panel-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 3px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      text-transform: uppercase;
+    }
+
+    /* Circuit Breaker Visual */
+    .cb-visual {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+    }
+
+    .cb-icon {
+      position: relative;
+      width: 100px; height: 100px;
+    }
+
+    .cb-ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      border: 3px solid var(--border);
+      animation: rotateSlow 8s linear infinite;
+    }
+
+    .cb-ring.outer {
+      border-color: transparent;
+      border-top-color: var(--accent2);
+      border-right-color: var(--accent2);
+    }
+
+    @keyframes rotateSlow {
+      to { transform: rotate(360deg); }
+    }
+
+    .cb-center {
+      position: absolute;
+      inset: 12px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.2rem;
+      transition: all 0.5s;
+    }
+
+    .cb-center.on-state {
+      background: radial-gradient(circle, rgba(57,255,20,0.2) 0%, rgba(57,255,20,0.05) 100%);
+      box-shadow: 0 0 24px rgba(57,255,20,0.3), inset 0 0 12px rgba(57,255,20,0.1);
+    }
+
+    .cb-center.off-state {
+      background: radial-gradient(circle, rgba(255,59,59,0.2) 0%, rgba(255,59,59,0.05) 100%);
+      box-shadow: 0 0 24px rgba(255,59,59,0.3), inset 0 0 12px rgba(255,59,59,0.1);
+    }
+
+    .cb-status-text {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+      transition: all 0.5s;
+    }
+
+    .cb-status-text.on-state { color: var(--green); text-shadow: 0 0 12px rgba(57,255,20,0.5); }
+    .cb-status-text.off-state { color: var(--red); text-shadow: 0 0 12px rgba(255,59,59,0.5); }
+
+    .cb-desc {
+      font-size: 0.85rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    /* Toggle button */
+    .toggle-btn {
+      width: 100%;
+      padding: 14px;
+      margin-top: 8px;
+      background: transparent;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .toggle-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+      z-index: 0;
+    }
+
+    .toggle-btn:hover::before { transform: scaleX(1); }
+    .toggle-btn:hover { color: #060e1c; }
+    .toggle-btn span { position: relative; z-index: 1; }
+
+    /* Info cards */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .info-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .info-box-val {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .info-box-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    /* Log Panel */
+    .log-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      overflow: hidden;
+    }
+
+    .log-panel::before {
+      content: '';
+      display: block;
+      height: 3px;
+      margin: -28px -28px 20px;
+      background: linear-gradient(90deg, var(--accent), transparent);
+    }
+
+    .log-list {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .log-list::-webkit-scrollbar { width: 4px; }
+    .log-list::-webkit-scrollbar-track { background: var(--card); }
+    .log-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .log-entry {
+      display: flex;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(26,58,92,0.5);
+      animation: logIn 0.3s ease;
+    }
+
+    @keyframes logIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    .log-time { color: var(--muted); flex-shrink: 0; }
+    .log-msg.success { color: var(--green); }
+    .log-msg.error   { color: var(--red); }
+    .log-msg.info    { color: var(--accent2); }
+    .log-msg.warning { color: var(--accent); }
+
+    /* ══════════════════════════════
+       KEYPAD PAGE
+    ══════════════════════════════ */
+    #page-keypad {
+      background:
+        radial-gradient(ellipse at 50% 0%, rgba(245,166,35,0.08) 0%, transparent 50%),
+        var(--bg);
+    }
+
+    .keypad-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 20px;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+
+    .keypad-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* LCD Display */
+    .lcd-display {
+      background: #0a1f0a;
+      border: 3px solid #1a4a1a;
+      border-radius: 10px;
+      padding: 16px 24px;
+      width: 280px;
+      box-shadow:
+        inset 0 0 20px rgba(0,0,0,0.5),
+        0 0 20px rgba(57,255,20,0.1);
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .lcd-row {
+      font-size: 1rem;
+      color: #39ff14;
+      text-shadow: 0 0 8px rgba(57,255,20,0.6);
+      height: 24px;
+      letter-spacing: 2px;
+      white-space: pre;
+      overflow: hidden;
+    }
+
+    .lcd-row + .lcd-row { margin-top: 8px; }
+
+    /* Keypad Grid */
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 68px);
+      grid-template-rows: repeat(4, 68px);
+      gap: 10px;
+    }
+
+    .key-btn {
+      width: 68px; height: 68px;
+      border-radius: 10px;
+      border: 2px solid var(--border);
+      background: linear-gradient(145deg, #0d1f35, #060e1c);
+      font-family: 'Orbitron', monospace;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.12s;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      user-select: none;
+    }
+
+    .key-btn::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 30%, rgba(255,255,255,0.08) 0%, transparent 60%);
+    }
+
+    .key-btn:hover {
+      border-color: var(--accent2);
+      background: linear-gradient(145deg, #112a45, #0a1628);
+      color: var(--accent2);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,200,255,0.2);
+    }
+
+    .key-btn:active {
+      transform: translateY(1px) scale(0.96);
+      background: linear-gradient(145deg, #060e1c, #0d1f35);
+    }
+
+    .key-btn.key-special {
+      border-color: rgba(245,166,35,0.4);
+      color: var(--accent);
+    }
+    .key-btn.key-special:hover { border-color: var(--accent); box-shadow: 0 6px 16px rgba(245,166,35,0.2); }
+
+    .key-btn.key-cancel {
+      border-color: rgba(0,200,255,0.4);
+      color: var(--accent2);
+      font-size: 1.3rem;
+    }
+    .key-btn.key-submit {
+      border-color: rgba(57,255,20,0.4);
+      color: var(--green);
+      font-size: 1.3rem;
+    }
+    .key-btn.key-reset {
+      border-color: rgba(255,165,0,0.4);
+      color: orange;
+    }
+
+    .key-sub {
+      font-size: 0.45rem;
+      letter-spacing: 1px;
+      opacity: 0.7;
+    }
+
+    .key-btn.pressed {
+      animation: keyPress 0.15s ease;
+    }
+
+    @keyframes keyPress {
+      0% { transform: scale(1); }
+      50% { transform: scale(0.92); background: rgba(0,200,255,0.15); }
+      100% { transform: scale(1); }
+    }
+
+    /* Keypad Status Panel */
+    .keypad-right {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      min-width: 260px;
+    }
+
+    .kp-status-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    .kp-status-label {
+      font-family: 'Orbitron', monospace;
+      font-size: 0.6rem;
+      letter-spacing: 3px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .kp-cb-state {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.8rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 16px;
+      border-radius: 10px;
+      transition: all 0.5s;
+    }
+
+    .kp-cb-state.on-state {
+      color: var(--green);
+      background: rgba(57,255,20,0.07);
+      border: 2px solid rgba(57,255,20,0.3);
+      text-shadow: 0 0 16px rgba(57,255,20,0.5);
+    }
+
+    .kp-cb-state.off-state {
+      color: var(--red);
+      background: rgba(255,59,59,0.07);
+      border: 2px solid rgba(255,59,59,0.3);
+      text-shadow: 0 0 16px rgba(255,59,59,0.5);
+    }
+
+    .kp-msg {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.82rem;
+      padding: 12px 16px;
+      border-radius: 8px;
+      min-height: 42px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .kp-msg.idle   { background: rgba(74,122,155,0.1); color: var(--muted); border: 1px solid var(--border); }
+    .kp-msg.typing { background: rgba(0,200,255,0.08); color: var(--accent2); border: 1px solid rgba(0,200,255,0.3); }
+    .kp-msg.ok     { background: rgba(57,255,20,0.08); color: var(--green);  border: 1px solid rgba(57,255,20,0.3); }
+    .kp-msg.fail   { background: rgba(255,59,59,0.08); color: var(--red);    border: 1px solid rgba(255,59,59,0.3); }
+    .kp-msg.reset  { background: rgba(255,165,0,0.08); color: orange;         border: 1px solid rgba(255,165,0,0.3); }
+
+    .back-to-dash {
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .back-to-dash:hover {
+      border-color: var(--accent2);
+      color: var(--accent2);
+    }
+
+    /* ── FOOTER ── */
+    .site-footer {
+      background: rgba(5,10,18,0.95);
+      border-top: 1px solid var(--border);
+      padding: 14px 32px;
+      text-align: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .site-footer span { color: var(--accent); }
+
+    /* ── NAV TABS ── */
+    .dash-nav {
+      display: flex;
+      gap: 4px;
+      padding: 16px 32px 0;
+    }
+
+    .nav-tab {
+      padding: 10px 24px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.65rem;
+      letter-spacing: 2px;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      border-radius: 8px 8px 0 0;
+      background: var(--card);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .nav-tab:hover { color: var(--text); border-color: var(--accent2); }
+    .nav-tab.active { background: var(--panel); color: var(--accent); border-color: var(--accent); }
+
+    /* Notifications */
+    .notif {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      padding: 14px 22px;
+      border-radius: 10px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      z-index: 9999;
+      animation: notifIn 0.3s ease;
+      max-width: 320px;
+    }
+
+    @keyframes notifIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .notif.success {
+      background: rgba(57,255,20,0.12);
+      border: 1px solid rgba(57,255,20,0.4);
+      color: var(--green);
+    }
+
+    .notif.error {
+      background: rgba(255,59,59,0.12);
+      border: 1px solid rgba(255,59,59,0.4);
+      color: var(--red);
+    }
+
+    /* Signal pulse on toggle */
+    .signal-pulse {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      pointer-events: none;
+      animation: signalOut 0.6s ease forwards;
+    }
+
+    @keyframes signalOut {
+      0%   { box-shadow: inset 0 0 0 0 rgba(245,166,35,0.5); }
+      50%  { box-shadow: inset 0 0 0 8px rgba(245,166,35,0.3); }
+      100% { box-shadow: inset 0 0 0 0 rgba(245,166,35,0); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .site-header { padding: 12px 16px; }
+      .header-title { font-size: 0.85rem; }
+      .logo-circle { width: 48px; height: 48px; }
+      .dash-grid { grid-template-columns: 1fr; }
+      .dash-body { padding: 16px; }
+      .dash-topbar { padding: 10px 16px; }
+      .keypad-body { gap: 24px; }
+      .keypad-grid { grid-template-columns: repeat(4, 60px); grid-template-rows: repeat(4, 60px); gap: 8px; }
+      .key-btn { width: 60px; height: 60px; font-size: 1rem; }
+      .lcd-display { width: 256px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════
+     PAGE: LOGIN
+══════════════════════════════ -->
+<div class="page active" id="page-login">
+  <header class="site-header">
+    <div class="header-logos">
+      <div class="logo-circle" id="logo-left">
+        <!-- College logo SVG fallback -->
+        <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="50" cy="50" r="38" fill="#0b1728"/>
+          <!-- Gear teeth -->
+          <g fill="#1a5c3a" stroke="#1a8a5a" stroke-width="1">
+            <rect x="46" y="2" width="8" height="14" rx="2"/>
+            <rect x="46" y="84" width="8" height="14" rx="2"/>
+            <rect x="2" y="46" width="14" height="8" rx="2"/>
+            <rect x="84" y="46" width="14" height="8" rx="2"/>
+          </g>
+          <!-- Inner content -->
+          <text x="50" y="44" text-anchor="middle" font-size="8" fill="#f5a623" font-family="monospace">GPC</text>
+          <text x="50" y="54" text-anchor="middle" font-size="6" fill="#00c8ff" font-family="monospace">SATNA</text>
+          <circle cx="50" cy="65" r="6" fill="none" stroke="#f5a623" stroke-width="1.5"/>
+          <line x1="50" y1="59" x2="50" y2="68" stroke="#f5a623" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="header-college">Government Polytechnic College &nbsp;·&nbsp; Satna (M.P.)</div>
+      <div class="header-title">IOT BASED <span>CIRCUIT BREAKER</span></div>
+    </div>
+
+    <div class="header-logos">
+      <div class="logo-circle" id="logo-right">
+        <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="50" cy="50" r="38" fill="#0b1728"/>
+          <text x="50" y="44" text-anchor="middle" font-size="8" fill="#f5a623" font-family="monospace">GPC</text>
+          <text x="50" y="54" text-anchor="middle" font-size="6" fill="#00c8ff" font-family="monospace">SATNA</text>
+          <circle cx="50" cy="65" r="6" fill="none" stroke="#f5a623" stroke-width="1.5"/>
+          <line x1="50" y1="59" x2="50" y2="68" stroke="#f5a623" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <div class="login-body">
+    <div class="login-card">
+      <div class="login-icon">🔐</div>
+      <div class="login-title">System Login</div>
+
+      <div class="form-group">
+        <label class="form-label" for="login-id">Login ID</label>
+        <input class="form-input" type="text" id="login-id" placeholder="Enter your ID" autocomplete="off" spellcheck="false"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="login-pass">Password</label>
+        <input class="form-input" type="password" id="login-pass" placeholder="Enter password"/>
+      </div>
+
+      <button class="login-btn" onclick="doLogin()"><span>LOGIN</span></button>
+
+      <div class="login-error" id="login-error">⚠ Invalid credentials. Access denied.</div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>Government Polytechnic College, Satna (M.P.)</span> &nbsp;|&nbsp; IOT Based Circuit Breaker &nbsp;|&nbsp; <span>2026</span>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════
+     PAGE: DASHBOARD
+══════════════════════════════ -->
+<div class="page" id="page-dashboard">
+  <header class="site-header">
+    <div class="header-logos">
+      <div class="logo-circle">
+        <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="50" cy="50" r="38" fill="#0b1728"/>
+          <text x="50" y="44" text-anchor="middle" font-size="8" fill="#f5a623" font-family="monospace">GPC</text>
+          <text x="50" y="54" text-anchor="middle" font-size="6" fill="#00c8ff" font-family="monospace">SATNA</text>
+          <circle cx="50" cy="65" r="6" fill="none" stroke="#f5a623" stroke-width="1.5"/>
+          <line x1="50" y1="59" x2="50" y2="68" stroke="#f5a623" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="header-college">Government Polytechnic College &nbsp;·&nbsp; Satna (M.P.)</div>
+      <div class="header-title">IOT BASED <span>CIRCUIT BREAKER</span></div>
+    </div>
+    <div class="header-logos">
+      <div class="logo-circle">
+        <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="50" cy="50" r="38" fill="#0b1728"/>
+          <text x="50" y="44" text-anchor="middle" font-size="8" fill="#f5a623" font-family="monospace">GPC</text>
+          <text x="50" y="54" text-anchor="middle" font-size="6" fill="#00c8ff" font-family="monospace">SATNA</text>
+          <circle cx="50" cy="65" r="6" fill="none" stroke="#f5a623" stroke-width="1.5"/>
+          <line x1="50" y1="59" x2="50" y2="68" stroke="#f5a623" stroke-width="1.5"/>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <div class="dash-topbar">
+    <div class="dash-user">
+      <div class="user-dot"></div>
+      <span id="dash-username">GPCS_HEAD</span>
+      &nbsp;|&nbsp;
+      <span id="dash-time" style="color:var(--muted)">--:--:--</span>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">⏏ LOGOUT</button>
+  </div>
+
+  <div class="dash-nav">
+    <div class="nav-tab active" onclick="showDashTab('overview')">OVERVIEW</div>
+    <div class="nav-tab" onclick="showDashTab('keypad')">KEYPAD CONTROL</div>
+    <div class="nav-tab" onclick="showDashTab('about')">ABOUT</div>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div id="tab-overview" class="dash-body">
+    <div class="dash-grid">
+
+      <!-- Status Panel -->
+      <div class="status-panel" id="cb-status-panel">
+        <div class="panel-label">⚡ CIRCUIT BREAKER STATUS</div>
+
+        <div class="cb-visual">
+          <div class="cb-icon">
+            <div class="cb-ring outer"></div>
+            <div class="cb-center on-state" id="cb-center-icon">⚡</div>
+          </div>
+          <div class="cb-status-text on-state" id="cb-status-text">ONLINE</div>
+          <div class="cb-desc" id="cb-desc-text">Circuit Breaker is operational. Power flowing normally.</div>
+        </div>
+
+        <div class="info-grid">
+          <div class="info-box">
+            <div class="info-box-val" id="relay-state" style="color:var(--muted)">OFF</div>
+            <div class="info-box-label">RELAY</div>
+          </div>
+          <div class="info-box">
+            <div class="info-box-val" id="bulb-state" style="color:var(--muted)">OFF</div>
+            <div class="info-box-label">INDICATOR BULB</div>
+          </div>
+          <div class="info-box">
+            <div class="info-box-val" id="buzzer-state" style="color:var(--muted)">IDLE</div>
+            <div class="info-box-label">BUZZER</div>
+          </div>
+          <div class="info-box">
+            <div class="info-box-val" id="firebase-state" style="color:var(--accent2)">ON</div>
+            <div class="info-box-label">FIREBASE</div>
+          </div>
+        </div>
+
+        <button class="toggle-btn" onclick="remoteToggle()" style="margin-top: 16px;">
+          <span id="toggle-btn-text">🌐 REMOTE TOGGLE CIRCUIT BREAKER</span>
+        </button>
+      </div>
+
+      <!-- Log Panel -->
+      <div class="log-panel">
+        <div class="panel-label">📋 SYSTEM EVENT LOG</div>
+        <div class="log-list" id="log-list">
+          <!-- Logs injected here -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Firebase info -->
+    <div class="status-panel" style="margin-bottom: 24px;">
+      <div class="panel-label">🔥 FIREBASE REALTIME DATABASE</div>
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="info-box" style="text-align:left; padding: 16px;">
+          <div class="info-box-label" style="margin-bottom:8px;">DATABASE URL</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:0.75rem; color:var(--accent2); word-break:break-all;">
+            https://gpcscircuitbreaker-default-rtdb.asia-southeast1.firebasedatabase.app/
+          </div>
+        </div>
+        <div style="display:flex; gap:12px;">
+          <div class="info-box" style="flex:1;">
+            <div class="info-box-val" style="font-size:0.8rem; color:var(--accent);">/circuitBreaker/status</div>
+            <div class="info-box-label" style="margin-top:6px;" id="fb-status-val">ON</div>
+          </div>
+          <div class="info-box" style="flex:1;">
+            <div class="info-box-val" style="font-size:0.8rem; color:var(--green);">/circuitBreaker/command</div>
+            <div class="info-box-label" style="margin-top:6px;" id="fb-cmd-val">IDLE</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT TAB (hidden) -->
+  <div id="tab-about" class="dash-body" style="display:none;">
+    <div class="status-panel">
+      <div class="panel-label">📄 PROJECT INFORMATION</div>
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:14px; margin-bottom:20px;">
+        <div class="info-box"><div class="info-box-val" style="color:var(--accent);">7</div><div class="info-box-label">HARDWARE COMPONENTS</div></div>
+        <div class="info-box"><div class="info-box-val" style="color:var(--accent2);">8</div><div class="info-box-label">ARDUINO PINS USED</div></div>
+        <div class="info-box"><div class="info-box-val" style="color:var(--green);">2</div><div class="info-box-label">FIREBASE PATHS</div></div>
+        <div class="info-box"><div class="info-box-val" style="color:var(--accent);">6</div><div class="info-box-label">PASSWORD DIGITS</div></div>
+        <div class="info-box"><div class="info-box-val" style="color:var(--red);">5s</div><div class="info-box-label">BUZZER DURATION</div></div>
+        <div class="info-box"><div class="info-box-val" style="color:var(--accent2);">1.5s</div><div class="info-box-label">COMMAND POLL RATE</div></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+        <div class="log-panel" style="padding:20px;">
+          <div class="panel-label">ARDUINO LIBRARIES</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:0.8rem; line-height:2;">
+            <div style="color:var(--accent2);">LiquidCrystal_I2C</div>
+            <div style="color:var(--accent2);">Keypad (Mark Stanley)</div>
+            <div style="color:var(--accent2);">Wire.h</div>
+          </div>
+        </div>
+        <div class="log-panel" style="padding:20px;">
+          <div class="panel-label">ESP8266 LIBRARIES</div>
+          <div style="font-family:'Share Tech Mono',monospace; font-size:0.8rem; line-height:2;">
+            <div style="color:var(--accent);">ESP8266WiFi</div>
+            <div style="color:var(--accent);">FirebaseESP8266 (Mobizt)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>Government Polytechnic College, Satna (M.P.)</span> &nbsp;|&nbsp; IOT Based Circuit Breaker &nbsp;|&nbsp; <span>2026</span>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════
+     PAGE: KEYPAD
+══════════════════════════════ -->
+<div class="page" id="page-keypad">
+  <header class="site-header">
+    <div class="header-logos">
+      <div class="logo-circle">
+        <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="50" cy="50" r="38" fill="#0b1728"/>
+          <text x="50" y="44" text-anchor="middle" font-size="8" fill="#f5a623" font-family="monospace">GPC</text>
+          <text x="50" y="54" text-anchor="middle" font-size="6" fill="#00c8ff" font-family="monospace">SATNA</text>
+        </svg>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="header-college">Government Polytechnic College &nbsp;·&nbsp; Satna (M.P.)</div>
+      <div class="header-title">KEYPAD <span>CONTROL PANEL</span></div>
+    </div>
+    <div class="header-logos">
+      <div class="logo-circle">
+        <svg class="logo-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="48" fill="none" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="50" cy="50" r="38" fill="#0b1728"/>
+          <text x="50" y="54" text-anchor="middle" font-size="6" fill="#00c8ff" font-family="monospace">SATNA</text>
+        </svg>
+      </div>
+    </div>
+  </header>
+
+  <div class="keypad-body">
+
+    <!-- Left: LCD + Keypad -->
+    <div class="keypad-left">
+      <!-- LCD -->
+      <div class="lcd-display">
+        <div class="lcd-row" id="lcd-row1">GPC Satna Sub.  </div>
+        <div class="lcd-row" id="lcd-row2">CB Status : ON  </div>
+      </div>
+
+      <!-- 4×4 Keypad -->
+      <div class="keypad-grid">
+        <button class="key-btn" onclick="pressKey('1')">1</button>
+        <button class="key-btn" onclick="pressKey('2')">2</button>
+        <button class="key-btn" onclick="pressKey('3')">3</button>
+        <button class="key-btn key-special" onclick="pressKey('A')">A</button>
+
+        <button class="key-btn" onclick="pressKey('4')">4</button>
+        <button class="key-btn" onclick="pressKey('5')">5</button>
+        <button class="key-btn" onclick="pressKey('6')">6</button>
+        <button class="key-btn key-special" onclick="pressKey('B')">B</button>
+
+        <button class="key-btn" onclick="pressKey('7')">7</button>
+        <button class="key-btn" onclick="pressKey('8')">8</button>
+        <button class="key-btn" onclick="pressKey('9')">9</button>
+        <button class="key-btn key-special" onclick="pressKey('C')">C</button>
+
+        <button class="key-btn key-cancel" onclick="pressKey('*')">*<span class="key-sub">CANCEL</span></button>
+        <button class="key-btn key-reset" onclick="pressKey('0')">0<span class="key-sub">RESET</span></button>
+        <button class="key-btn key-submit" onclick="pressKey('#')">#<span class="key-sub">SUBMIT</span></button>
+        <button class="key-btn key-special" onclick="pressKey('D')">D</button>
+      </div>
+    </div>
+
+    <!-- Right: Status + Messages -->
+    <div class="keypad-right">
+
+      <div class="kp-status-box">
+        <div class="kp-status-label">⚡ CIRCUIT BREAKER STATE</div>
+        <div class="kp-cb-state on-state" id="kp-cb-state">ON</div>
+      </div>
+
+      <div class="kp-status-box">
+        <div class="kp-status-label">💬 SYSTEM MESSAGE</div>
+        <div class="kp-msg idle" id="kp-msg">Awaiting input...</div>
+      </div>
+
+      <div class="kp-status-box">
+        <div class="kp-status-label">🔑 KEY REFERENCE</div>
+        <div style="font-family:'Share Tech Mono',monospace; font-size:0.75rem; line-height:1.9; color:var(--muted);">
+          <div><span style="color:var(--accent2);">0–9, A–D</span> → Type password</div>
+          <div><span style="color:var(--green);"># (Hash)</span> &nbsp;→ Submit password</div>
+          <div><span style="color:var(--accent2);">* (Star)</span> &nbsp;→ Cancel entry</div>
+          <div><span style="color:orange;">0 (Zero)</span> &nbsp;&nbsp;→ Instant CB reset</div>
+          <div style="margin-top:8px; color:var(--accent); font-size:0.72rem;">PASSWORD: 147369</div>
+        </div>
+      </div>
+
+      <button class="back-to-dash" onclick="showPage('page-dashboard')">← Back to Dashboard</button>
+    </div>
+
+  </div>
+
+  <footer class="site-footer">
+    <span>Government Polytechnic College, Satna (M.P.)</span> &nbsp;|&nbsp; IOT Based Circuit Breaker &nbsp;|&nbsp; <span>2026</span>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════
+     JAVASCRIPT
+══════════════════════════════ -->
+<script>
+  // ── State ──
+  const USERS = {
+    'GPCS_Head': 'gpcs@123',
+    'GPCS_Engineer': 'gpcs@123'
+  };
+  const CB_PASSWORD = '147369';
+
+  let state = {
+    loggedIn: false,
+    currentUser: '',
+    cbState: 'ON',      // 'ON' or 'OFF'
+    keypadBuffer: '',
+    keypadMode: 'idle'  // 'idle', 'typing'
+  };
+
+  // ── Page Navigation ──
+  function showPage(id) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    window.scrollTo(0,0);
+  }
+
+  // ── Login ──
+  function doLogin() {
+    const id = document.getElementById('login-id').value.trim();
+    const pw = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+
+    if (USERS[id] && USERS[id] === pw) {
+      state.loggedIn = true;
+      state.currentUser = id;
+      errEl.style.display = 'none';
+      document.getElementById('dash-username').textContent = id.toUpperCase();
+      addLog('info', `User ${id} logged in`);
+      showPage('page-dashboard');
+      startClock();
+    } else {
+      errEl.style.display = 'block';
+      errEl.style.animation = 'none';
+      void errEl.offsetWidth;
+      errEl.style.animation = 'shake 0.4s ease';
+    }
+  }
+
+  // Enter key on login
+  document.getElementById('login-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+  document.getElementById('login-id').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('login-pass').focus();
+  });
+
+  function doLogout() {
+    addLog('info', `User ${state.currentUser} logged out`);
+    state.loggedIn = false;
+    state.currentUser = '';
+    document.getElementById('login-id').value = '';
+    document.getElementById('login-pass').value = '';
+    showPage('page-login');
+  }
+
+  // ── Clock ──
+  function startClock() {
+    setInterval(() => {
+      const t = new Date().toLocaleTimeString('en-IN', {hour12:false});
+      document.getElementById('dash-time').textContent = t;
+    }, 1000);
+  }
+
+  // ── Dashboard Tabs ──
+  function showDashTab(tab) {
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+
+    document.getElementById('tab-overview').style.display = 'none';
+    document.getElementById('tab-about').style.display = 'none';
+
+    if (tab === 'overview') {
+      document.getElementById('tab-overview').style.display = 'block';
+    } else if (tab === 'about') {
+      document.getElementById('tab-about').style.display = 'block';
+    } else if (tab === 'keypad') {
+      showPage('page-keypad');
+    }
+  }
+
+  // ── CB State Management ──
+  function setCBState(newState) {
+    state.cbState = newState;
+    updateDashboardUI();
+    updateKeypadUI();
+    addLog(newState === 'ON' ? 'success' : 'error',
+      `Circuit Breaker ${newState === 'ON' ? 'ACTIVATED (ON)' : 'TRIPPED (OFF)'}`);
+    showNotif(newState === 'ON' ? 'success' : 'error',
+      newState === 'ON' ? '✅ Circuit Breaker is now ON' : '⚠ Circuit Breaker TRIPPED — OFF');
+  }
+
+  function updateDashboardUI() {
+    const isOn = state.cbState === 'ON';
+
+    // Status panel
+    const icon = document.getElementById('cb-center-icon');
+    const txt  = document.getElementById('cb-status-text');
+    const desc = document.getElementById('cb-desc-text');
+    icon.className = 'cb-center ' + (isOn ? 'on-state' : 'off-state');
+    icon.textContent = isOn ? '⚡' : '⛔';
+    txt.className = 'cb-status-text ' + (isOn ? 'on-state' : 'off-state');
+    txt.textContent = isOn ? 'ONLINE' : 'TRIPPED';
+    desc.textContent = isOn
+      ? 'Circuit Breaker is operational. Power flowing normally.'
+      : 'Circuit Breaker has tripped. Power interrupted. Relay and indicator ON.';
+
+    // Info boxes
+    document.getElementById('relay-state').textContent  = isOn ? 'OFF' : 'ON';
+    document.getElementById('relay-state').style.color  = isOn ? 'var(--muted)' : 'var(--red)';
+    document.getElementById('bulb-state').textContent   = isOn ? 'OFF' : 'ON';
+    document.getElementById('bulb-state').style.color   = isOn ? 'var(--muted)' : 'var(--accent)';
+    document.getElementById('buzzer-state').textContent = isOn ? 'IDLE' : 'ACTIVE';
+    document.getElementById('buzzer-state').style.color = isOn ? 'var(--muted)' : 'var(--red)';
+    document.getElementById('firebase-state').textContent = state.cbState;
+    document.getElementById('firebase-state').style.color = isOn ? 'var(--accent2)' : 'var(--red)';
+    document.getElementById('fb-status-val').textContent  = state.cbState;
+    document.getElementById('fb-cmd-val').textContent = 'IDLE';
+
+    // Toggle button
+    document.getElementById('toggle-btn-text').textContent =
+      isOn ? '🌐 REMOTE TOGGLE CIRCUIT BREAKER' : '🌐 REMOTE RESET CIRCUIT BREAKER';
+  }
+
+  // ── Remote Toggle (Dashboard) ──
+  function remoteToggle() {
+    const panel = document.getElementById('cb-status-panel');
+    const pulse = document.createElement('div');
+    pulse.className = 'signal-pulse';
+    panel.appendChild(pulse);
+    setTimeout(() => pulse.remove(), 700);
+
+    addLog('info', 'Remote TOGGLE command sent via Firebase');
+    document.getElementById('fb-cmd-val').textContent = 'TOGGLE';
+    setTimeout(() => {
+      const newState = state.cbState === 'ON' ? 'OFF' : 'ON';
+      setCBState(newState);
+      document.getElementById('fb-cmd-val').textContent = 'IDLE';
+    }, 600);
+  }
+
+  // ── Keypad Logic ──
+  function pressKey(k) {
+    // Visual feedback
+    const btns = document.querySelectorAll('.key-btn');
+    btns.forEach(b => {
+      if (b.textContent.trim().startsWith(k)) {
+        b.classList.add('pressed');
+        setTimeout(() => b.classList.remove('pressed'), 200);
+      }
+    });
+
+    if (k === '*') {
+      // Cancel
+      cancelEntry();
+      return;
+    }
+
+    if (k === '0' && state.keypadMode === 'idle') {
+      // Instant reset
+      resetCB();
+      return;
+    }
+
+    if (k === '#') {
+      // Submit
+      submitPassword();
+      return;
+    }
+
+    // Start / continue typing
+    if (state.keypadMode === 'idle') {
+      state.keypadMode = 'typing';
+      state.keypadBuffer = '';
+      setLCDRow2('Pass:           ');
+      setMsg('typing', 'Enter password...');
+    }
+
+    if (state.keypadMode === 'typing' && state.keypadBuffer.length < 10) {
+      state.keypadBuffer += k;
+      const dots = '*'.repeat(state.keypadBuffer.length);
+      setLCDRow2(`Pass: ${dots.padEnd(10,' ')}`);
+    }
+  }
+
+  function submitPassword() {
+    if (state.keypadMode !== 'typing' || state.keypadBuffer.length === 0) {
+      setMsg('idle', 'No input. Press a key.');
+      return;
+    }
+
+    if (state.keypadBuffer === CB_PASSWORD) {
+      const newState = state.cbState === 'ON' ? 'OFF' : 'ON';
+      setCBState(newState);
+      setMsg('ok', newState === 'ON' ? '✅ Access Granted — CB ON' : '✅ Access Granted — CB OFF');
+      setLCDRow2('Access Granted! ');
+      setTimeout(() => {
+        state.keypadMode = 'idle';
+        state.keypadBuffer = '';
+        setLCDRow2(`CB Status : ${newState.padEnd(3,' ')}`);
+        setMsg('idle', 'Awaiting input...');
+      }, 2000);
+    } else {
+      setMsg('fail', '❌ Wrong password — Access Denied');
+      setLCDRow2('Access Denied!! ');
+      addLog('error', 'Wrong password entered via keypad');
+      buzzerBeep(3);
+      setTimeout(() => {
+        state.keypadMode = 'idle';
+        state.keypadBuffer = '';
+        setLCDRow2(`CB Status : ${state.cbState.padEnd(3,' ')}`);
+        setMsg('idle', 'Awaiting input...');
+      }, 2000);
+    }
+  }
+
+  function cancelEntry() {
+    state.keypadMode = 'idle';
+    state.keypadBuffer = '';
+    setLCDRow2(`CB Status : ${state.cbState.padEnd(3,' ')}`);
+    setMsg('idle', 'Entry cancelled.');
+    setTimeout(() => setMsg('idle', 'Awaiting input...'), 1500);
+  }
+
+  function resetCB() {
+    if (state.cbState === 'ON') {
+      setMsg('idle', 'CB already ON.');
+      return;
+    }
+    setCBState('ON');
+    setMsg('reset', '🔄 CB Instant Reset → ON');
+    setLCDRow2('CB Reset: ON    ');
+    addLog('warning', 'Instant CB reset via keypad key 0');
+    setTimeout(() => {
+      setLCDRow2('CB Status : ON  ');
+      setMsg('idle', 'Awaiting input...');
+    }, 2000);
+  }
+
+  function setLCDRow2(text) {
+    document.getElementById('lcd-row2').textContent = text.substring(0,16).padEnd(16,' ');
+  }
+
+  function setMsg(type, text) {
+    const el = document.getElementById('kp-msg');
+    el.className = 'kp-msg ' + type;
+    el.textContent = text;
+  }
+
+  function updateKeypadUI() {
+    const isOn = state.cbState === 'ON';
+    const el = document.getElementById('kp-cb-state');
+    el.textContent = state.cbState;
+    el.className = 'kp-cb-state ' + (isOn ? 'on-state' : 'off-state');
+    if (state.keypadMode === 'idle') {
+      setLCDRow2(`CB Status : ${state.cbState.padEnd(3,' ')}`);
+    }
+  }
+
+  function buzzerBeep(times) {
+    // Visual buzzer indication
+    let count = 0;
+    const interval = setInterval(() => {
+      document.body.style.borderTop = '2px solid var(--red)';
+      setTimeout(() => document.body.style.borderTop = '', 200);
+      count++;
+      if (count >= times) clearInterval(interval);
+    }, 350);
+  }
+
+  // ── Event Log ──
+  function addLog(type, msg) {
+    const list = document.getElementById('log-list');
+    if (!list) return;
+    const now = new Date().toLocaleTimeString('en-IN', {hour12:false});
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">${now}</span><span class="log-msg ${type}">${msg}</span>`;
+    list.insertBefore(entry, list.firstChild);
+    if (list.children.length > 50) list.removeChild(list.lastChild);
+  }
+
+  // ── Notifications ──
+  function showNotif(type, msg) {
+    const n = document.createElement('div');
+    n.className = 'notif ' + type;
+    n.textContent = msg;
+    document.body.appendChild(n);
+    setTimeout(() => n.remove(), 3000);
+  }
+
+  // ── Init ──
+  addLog('info', 'System initialized');
+  addLog('info', 'Firebase connection established');
+  addLog('success', 'Circuit Breaker status: ON');
+  updateDashboardUI();
+  updateKeypadUI();
+</script>
+
+</body>
+</html>
